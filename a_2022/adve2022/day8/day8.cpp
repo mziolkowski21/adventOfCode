@@ -88,7 +88,7 @@ int main()
             if (grid[max_rows-1-1 - row][col] > max_yet_up) // down to up 
             {
                 visible[max_rows-row-1-1][col] = true; // forgot to subtract row, ffs
-                max_yet_up = grid[max_rows-1-1-row][col];
+                max_yet_up = grid[max_rows-1-1][col];
             }
         }
     }

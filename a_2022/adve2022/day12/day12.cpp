@@ -7,56 +7,72 @@
 using std::vector;
 using std::pair;
 
+// implements BFS - Breadth First Search Algorithm 
+// ("special-case of Dijkstra's algorithm on unweighted graphs, where the priority queue degenerates into a FIFO queue.")
 
-bool moveHorizontally(pair<int,int> &currCords, std::vector<std::vector<char>> grid, vector<std::vector<bool>> &beenThere,int dx)
+
+vector<pair<int,int>> findAdjacencyList(pair<int,int> cords, const vector<vector<char>> &grid)
 {
-    if((dx > 0) && !(currCords.second+1 >= grid.size())) // try to move to the right
-    {
-        if((grid[currCords.first][currCords.second]-grid[currCords.first+1][currCords.second] < 1) 
-            && !beenThere[currCords.first][currCords.second+1])
-            {
-                currCords.second++;
-                beenThere[currCords.first][currCords.second] = true;
-                return true;
-            }
-    }
-    else if((dx < 0) && !(currCords.second-1 < 0)) // try to move to the left
-    {
-        if((grid[currCords.first][currCords.second]-grid[currCords.first-1][currCords.second] < 1)
-            && !beenThere[currCords.first][currCords.second-1])
-            {
-                currCords.second--;
-                beenThere[currCords.first][currCords.second] = true;
-                return true;
-            }
-    }
-    return false;
+
+    vector<pair<int,int>> adjacentList;
+    if(!(cords.first - 1 < 0) && static_cast<int>(grid[cords.first-1][cords.second] - grid[cords.first][cords.second]) <= 1)
+        adjacentList.push_back({cords.first-1,cords.second});
+    if(!(cords.first + 1 >= grid.size()) && static_cast<int>(grid[cords.first+1][cords.second] - grid[cords.first][cords.second]) <= 1)
+        adjacentList.push_back({cords.first+1,cords.second});
+    if(!(cords.second - 1 < 0) && static_cast<int>(grid[cords.first][cords.second-1] - grid[cords.first][cords.second]) <= 1)
+        adjacentList.push_back({cords.first, cords.second-1});
+    if(!(cords.second + 1 >= grid[0].size()) && static_cast<int>(grid[cords.first][cords.second+1] - grid[cords.first][cords.second]) <= 1)
+        adjacentList.push_back({cords.first ,cords.second+1});
+
+    return adjacentList;
 }
 
-bool moveVertically(pair<int,int> &currCords, std::vector<std::vector<char>> grid, vector<std::vector<bool>> &beenThere,int dy)
+
+vector<vector<pair<int,int>>> solve(pair<int,int> Scords, vector<vector<bool>> emptyVisited, const vector<vector<char>> &grid) 
 {
-    if((dy < 0) && !(currCords.first-1 < 0)) // try to move up
+    // solves graph starting at S coordinates and returns a grid of coordinates from which it got to given pos
+    
+    // create a queue structure
+    bool reached_end = false;
+    vector<pair<int,int>> queue;
+    queue.push_back(Scords);
+
+    vector<vector<bool>> visited = emptyVisited;
+    visited[Scords.first][Scords.second] = true;
+    
+    vector<vector<pair<int,int>>> prev(emptyVisited.size(), vector<pair<int,int>>(emptyVisited[0].size(),{999,999})); // holds a parent or from where we got to these cords
+    // 999 - auxillary null value
+    
+    while(!queue.empty())
     {
-        if((grid[currCords.first][currCords.second]-grid[currCords.first+1][currCords.second] < 1) 
-            && !beenThere[currCords.first][currCords.second-1])
+        pair<int,int> cords = queue.back();
+        queue.pop_back();
+        if (grid[cords.first][cords.second] == 'E')
+        {
+            reached_end = true;
+            break;
+        }
+        vector<pair<int,int>> neighbours = findAdjacencyList(cords,grid);
+        for(pair<int,int>next:neighbours)
+        {
+            if (!visited[next.first][next.second])
             {
-                currCords.first--;
-                beenThere[currCords.first][currCords.second] = true;
-                return true;
+                queue.push_back(next);
+                visited[next.first][next.second] = true;
+                prev[next.first][next.second] = cords;
             }
+        }
     }
-    else if((dy > 0) && !(currCords.first+1 >= grid.size())) // try to move down
-    {
-        if((grid[currCords.first][currCords.second]-grid[currCords.first+1][currCords.second] < 1)
-            && !beenThere[currCords.first+1][currCords.second])
-            {
-                currCords.first++;
-                beenThere[currCords.first][currCords.second] = true;
-                return true;
-            }
-    }
-    return false;
+    
+    return prev;
 }
+
+// vector<vector<bool>> reconstructPath(pair<int,int> Scords, pair<int,int> Ecords, vector<vector<pair<int,int>>> prev, vector<vector<bool>> emptyVisited)
+// {
+//     vector<vector<bool>> path = emptyVisited;
+//     for(pair<int,int> row = Ecords; row != {999,999}; row = prev[])
+// }
+
 
 int main()
 {
@@ -65,9 +81,10 @@ int main()
     vector<vector<char>> grid;
     std::pair <int,int> SCords, ECords, currCords;
 
+
+    // Parse input
     std::ifstream input("testInput.txt");
     std::string line;
-
     unsigned rowTemp=0;
     while(getline(input,line))
     {
@@ -75,75 +92,39 @@ int main()
         vector<char> row;
         for(char height:line)
         {
-            row.push_back(height);
             if(height=='S')
             {
                 SCords.first = rowTemp;
                 SCords.second = colTemp;
+                // height = 'a';
             }
             else if(height=='E')
             {
                 ECords.first = rowTemp;
                 ECords.second = colTemp;
+                // height = 'z';
             }
+            row.push_back(height);
             colTemp++;
         }
         rowTemp++;
         grid.push_back(row);
     }
+    // end of parsing
 
-    vector<vector<bool>> beenThere(grid.size(),vector<bool>(grid[0].size(),false));
-
-    beenThere[SCords.first][SCords.second] = true;
-
-        for(std::vector<bool> row: beenThere)
+    for(vector<char> row: grid)
     {
-        for(bool cols: row)
+        for(char col: row)
         {
-            std::cout << cols << ' ';
+            std::cout << col << " ";
         }
-        std::cout << '\n';
+        std::cout << "\n";
     }
-
-    std::cout << "{" << SCords.first << ',' << SCords.second << '}' << '\n';
-    std::cout << "{" << ECords.first << ',' << ECords.second << '}' << '\n';
-
-    currCords = SCords;
-
-    int dx = ECords.first-SCords.first;
-    int dy = ECords.second-SCords.second;
-    while (dx!=0 && dy!=0)
-    {
-        dx = ECords.first-SCords.first;
-        dy = ECords.second-SCords.second;
-
-        if(std::abs(dx)>=std::abs(dy)) // try move horizontally first
-        {
-            if(moveHorizontally(currCords,grid,beenThere,dx)) continue;
-            else if (moveVertically(currCords,grid,beenThere,dy)) continue; // can't go horizontally try vertically
-            else if (moveVertically(currCords,grid,beenThere,-dy)) continue; // can't; go other way vertically then
-            else if (moveHorizontally(currCords,grid,beenThere,-dx)) continue; // can't; go other way horizontally then
-            else std::cout << "Dupa, can't go anywhere";
-        }
-        else // try move vertically first
-        {
-            if(moveVertically(currCords,grid,beenThere,dy)) continue;
-            else if (moveHorizontally(currCords,grid,beenThere,dx)) continue; // can't go horizontally try vertically
-            else if (moveHorizontally(currCords,grid,beenThere,-dx)) continue; // can't; go other way vertically then
-            else if (moveVertically(currCords,grid,beenThere,-dy)) continue; // can't; go other way horizontally then
-            else std::cout << "Dupa, can't go anywhere";
-        }
+    std::cout << "\n";
 
 
-    }
+    vector<vector<bool>> visited(grid.size(),vector<bool>(grid[0].size(),false));
 
-    for(std::vector<bool> row: beenThere)
-    {
-        for(bool cols: row)
-        {
-            std::cout << cols << ' ';
-        }
-        std::cout << '\n';
-    }
+     vector<vector<pair<int,int>>>  prev = solve(SCords,visited,grid);
 
 }
